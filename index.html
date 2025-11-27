@@ -194,8 +194,8 @@
         function renderWordCloud(data) {
             const words = data.map(d => ({ 
                 text: d.text, 
-                // 模擬大小：讓文字大小在 20px 到 50px 之間隨機分佈 (確保可視性)
-                size: 20 + Math.floor(Math.random() * 30), 
+                // 模擬大小：【已修正】調整為 12px 到 36px，增加佈局成功率
+                size: 12 + Math.floor(Math.random() * 25), 
                 color: customColors[Math.floor(Math.random() * customColors.length)]
             }));
             
@@ -207,7 +207,7 @@
             const layout = d3.cloud()
                 .size([width, height])
                 .words(words)
-                .padding(1) // 關鍵：縮小間距，以利長句子排列
+                .padding(2) // 關鍵：間距調整為 2，避免失敗
                 .rotate(() => (Math.random() > 0.6 ? 90 : 0)) // 提高旋轉機率
                 .font("Noto Sans TC")
                 .fontSize(d => d.size)
