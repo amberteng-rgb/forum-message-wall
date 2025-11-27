@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>垃圾減量大作戰</title>
+    <title>垃圾減量大作戰！</title>
+    
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-cloud@1.2.5/d3.cloud.min.js"></script>
+    
     <style>
         /* --- 風格設定 (維持不變) --- */
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;500;700;900&display=swap');
@@ -75,36 +79,26 @@
             background: rgba(255,255,255,0.8); padding: 10px 30px; border-radius: 50px;
             display: inline-block;
         }
-
-        /* --- 修改區塊 1: .message-wall (多欄網格佈局) --- */
+        /* 文字雲的樣式 */
         .message-wall {
+            width: 100%; 
             height: 100%;
-            overflow-y: scroll; /* 允許滾動 */
-            position: relative;
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* 自動切換欄位 */
-            gap: 20px; /* 卡片間距 */
-            align-items: start;
-            padding: 20px 0;
-            mask-image: none; /* 移除漸變遮罩 */
-            -webkit-mask-image: none;
+            display: flex; 
+            justify-content: center;
+            align-items: center;
         }
-        /* --- 修改區塊 1 結束 --- */
-
-        /* --- 修改區塊 2: .message-card (移除居中、新增過渡效果) --- */
-        .message-card {
-            background: white; padding: 20px 30px; border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            border-left: 6px solid var(--primary-green);
-            font-size: 1.2rem; animation: slideIn 0.8s ease-out;
-            width: 100%; max-width: none; /* 讓 Grid 決定寬度 */
-            margin: 0; /* 移除居中設定 */
-            transition: transform 0.5s, box-shadow 0.3s; /* 讓旋轉更平滑 */
+        .word-cloud-text {
+            font-family: 'Noto Sans TC', sans-serif;
+            font-weight: 900;
+            fill: #333;
+            cursor: default;
+            transition: fill 0.3s, opacity 0.3s;
         }
-        /* --- 修改區塊 2 結束 --- */
+        .word-cloud-text:hover {
+            fill: var(--primary-red);
+            opacity: 0.8;
+        }
 
-        .message-card:nth-child(even) { border-left-color: var(--primary-red); }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
 
         /* Footer */
         .footer { position: absolute; bottom: 0; width: 100%; background: white; padding: 10px; text-align: center; font-size: 0.75rem; color: #888; }
@@ -122,7 +116,7 @@
     <div class="container">
         <div id="mobile-input-view">
             <div class="header-logo">
-                <h1><span class="title-red">垃圾減量大作戰！</span></h1>
+                <h1>垃圾減量大作戰！</h1> 
             </div>
             <br>
             <div class="input-card">
@@ -150,25 +144,24 @@
     <div class="footer">主辦單位：隆中向上教育基金會 | 贊助單位：XSGames GameSparcs</div>
 
     <script>
-        // ✅ 您的 Google Apps Script 網址已更新在此處
+        // ✅ 您的 Google Apps Script 網址
         const scriptURL = "https://script.google.com/macros/s/AKfycbzvncIKXT9kH8bpgpk2bt6kusxP1Yk4vb3BrosCLpr00Xlf1wQ5qkRslQI4_g0K638NxA/exec"; 
 
-        // --- 手機端邏輯 ---
+        // 牆面元素和尺寸
+        const wallContainer = document.getElementById('wallContainer');
+        let currentMessagesHash = ""; 
+
+        // --- 手機端邏輯 (保持不變) ---
         function submitMessage() {
             const input = document.getElementById('userInput');
             const btn = document.getElementById('submitBtn');
             const text = input.value.trim();
-
             if (!text) { alert("請輸入內容！"); return; }
-            
-
             btn.disabled = true;
             btn.innerText = "傳送中...";
-
-            // 使用 GET 請求發送資料
             fetch(`${scriptURL}?action=insert&text=${encodeURIComponent(text)}`)
                 .then(() => {
-                    alert("感謝您的響應！訊息已上傳完成。");
+                    alert("感謝您的響應！訊息已上牆。");
                     input.value = "";
                     btn.disabled = false;
                     btn.innerText = "送出行動";
@@ -181,57 +174,73 @@
                 });
         }
 
-        // --- 牆面端邏輯 ---
-        const wallContainer = document.getElementById('wallContainer');
-        let currentMessagesHash = ""; 
+        // --- 牆面端邏輯 (使用 D3-Cloud 重新繪製) ---
+
+        const customColors = ["#A62323", "#2E7D63", "#444444"]; 
 
         function updateWall() {
             fetch(`${scriptURL}?action=read`)
                 .then(response => response.json())
                 .then(data => {
-                    
                     const newHash = JSON.stringify(data);
                     if (newHash !== currentMessagesHash) {
                         currentMessagesHash = newHash;
-                        renderWall(data);
+                        renderWordCloud(data);
                     }
                 })
                 .catch(console.error);
         }
 
-        /* --- 修改區塊 3: renderWall 函式 (新增亂數旋轉和偏移) --- */
-        function renderWall(data) {
-            wallContainer.innerHTML = ""; // 清空
-            data.forEach((item, index) => {
-                const card = document.createElement('div');
-                card.className = 'message-card';
-                card.style.animationDelay = `${index * 0.1}s`;
-                card.innerText = item.text;
+        function renderWordCloud(data) {
+            const words = data.map(d => ({ 
+                text: d.text, 
+                size: 15 + Math.floor(Math.random() * 30), 
+                color: customColors[Math.floor(Math.random() * customColors.length)]
+            }));
+            
+            wallContainer.innerHTML = '';
 
-                // 新增：實現亂數旋轉和偏移 (模擬文字雲的不規則)
-                // 旋轉角度：-4 度到 +3 度之間
-                const randomRotation = Math.floor(Math.random() * 8) - 4; 
-                // X 軸偏移：-10px 到 +9px 之間
-                const randomXOffset = Math.floor(Math.random() * 20) - 10; 
-                
-                card.style.transform = `rotate(${randomRotation}deg) translateX(${randomXOffset}px)`;
-                // 讓滑鼠移上去時可以停止動畫 (如果不需要可移除)
-                card.onmouseover = () => card.style.transform = 'none'; 
-                card.onmouseout = () => card.style.transform = `rotate(${randomRotation}deg) translateX(${randomXOffset}px)`;
+            const width = wallContainer.clientWidth;
+            const height = wallContainer.clientHeight;
+            
+            const layout = d3.cloud()
+                .size([width, height])
+                .words(words)
+                .padding(5) 
+                .rotate(() => (Math.random() > 0.8 ? 90 : 0)) 
+                .font("Noto Sans TC")
+                .fontSize(d => d.size)
+                .on("end", draw);
 
-                wallContainer.appendChild(card);
-            });
+            layout.start();
+
+            function draw(words) {
+                d3.select("#wallContainer").append("svg")
+                    .attr("width", layout.size()[0])
+                    .attr("height", layout.size()[1])
+                    .append("g")
+                    .attr("transform", "translate(" + layout.size()[0] / 2 + "," + layout.size()[1] / 2 + ")")
+                    .selectAll("text")
+                    .data(words)
+                    .enter().append("text")
+                    .attr("class", "word-cloud-text")
+                    .style("font-size", d => d.size + "px")
+                    .style("fill", d => d.color) 
+                    .attr("text-anchor", "middle")
+                    .attr("transform", d => "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")")
+                    .text(d => d.text)
+                    .style("opacity", 0) 
+                    .transition()
+                    .duration(1000)
+                    .style("opacity", 1); 
+            }
         }
-        /* --- 修改區塊 3 結束 --- */
 
         // 只有在寬螢幕 (牆面) 時才啟用自動更新
         if (window.innerWidth > 768) {
-            // 頁面載入時先跑一次
             updateWall(); 
-            // 之後每 1 秒更新一次
             setInterval(updateWall, 3000); 
         }
     </script>
 </body>
 </html>
-
