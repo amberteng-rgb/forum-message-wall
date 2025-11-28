@@ -6,7 +6,7 @@
     <title>垃圾減量大作戰！</title>
     
     <style>
-        /* --- 風格設定 --- */
+        /* --- 風格設定 (結構化) --- */
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;500;700;900&display=swap');
         :root {
             --primary-red: #A62323;
@@ -23,69 +23,37 @@
             overflow: hidden;
             position: relative;
         }
-        .gold-curve {
-            position: absolute;
-            border-radius: 50%;
-            border: 1px solid var(--accent-gold);
-            opacity: 0.6;
-            z-index: 0;
-            pointer-events: none;
-        }
+        
+        /* 曲線裝飾 */
+        .gold-curve { position: absolute; border-radius: 50%; border: 1px solid var(--accent-gold); opacity: 0.6; z-index: 0; pointer-events: none; }
         .curve-1 { width: 80vw; height: 80vw; top: -40vw; right: -20vw; }
         .curve-2 { width: 90vw; height: 90vw; top: -45vw; right: -25vw; border-width: 2px; opacity: 0.4; }
-        .container {
-            position: relative;
-            z-index: 10;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        .header-logo h1 { font-weight: 900; font-size: 2.2rem; letter-spacing: 2px; margin: 0; text-align: center; }
-        .title-red { color: var(--primary-red); }
-        .title-green { color: var(--primary-green); }
         
+        /* 主要容器 */
+        .container { position: relative; z-index: 10; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .header-logo h1 { font-weight: 900; font-size: 2.2rem; letter-spacing: 2px; margin: 0; text-align: center; }
+
         /* 手機介面 */
         #mobile-input-view { display: none; width: 90%; max-width: 400px; }
-        .input-card {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            text-align: center;
-            border-top: 5px solid var(--primary-green);
-        }
+        .input-card { background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; border-top: 5px solid var(--primary-green); }
         .instruction { text-align: left; font-size: 0.9rem; margin-bottom: 20px; line-height: 1.6; }
-        textarea {
-            width: 100%; height: 120px; padding: 15px;
-            border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; resize: none; margin-bottom: 20px;
-        }
-        button {
-            background: linear-gradient(90deg, var(--primary-red), var(--primary-green));
-            color: white; border: none; padding: 12px 30px;
-            font-size: 1.1rem; border-radius: 50px; cursor: pointer; width: 100%; font-weight: bold;
-        }
+        textarea { width: 100%; height: 120px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; resize: none; margin-bottom: 20px; }
+        button { background: linear-gradient(90deg, var(--primary-red), var(--primary-green)); color: white; border: none; padding: 12px 30px; font-size: 1.1rem; border-radius: 50px; cursor: pointer; width: 100%; font-weight: bold; }
         button:disabled { opacity: 0.6; cursor: not-allowed; }
 
         /* 牆面介面 */
         #desktop-wall-view { display: none; width: 100%; height: 90vh; }
         .wall-header { text-align: center; margin-bottom: 10px; }
-        .impact-text {
-            font-size: 1.5rem; font-weight: 700; color: #444;
-            background: rgba(255,255,255,0.8); padding: 10px 30px; border-radius: 50px;
-            display: inline-block;
-        }
+        .impact-text { font-size: 1.5rem; font-weight: 700; color: #444; background: rgba(255,255,255,0.8); padding: 10px 30px; border-radius: 50px; display: inline-block; }
         
         /* --- 跑馬燈核心樣式 --- */
         .message-wall {
             width: 100%; 
-            /* 跑馬燈放在畫面中間，佔據一定高度 */
             height: 300px; 
             overflow: hidden; 
             display: flex;
             align-items: center; 
-            position: absolute; /* 絕對定位到畫面中間 */
+            position: absolute; 
             top: 50%;
             transform: translateY(-50%);
             margin: 0;
@@ -93,10 +61,9 @@
         }
         .marquee-content {
             display: flex;
-            white-space: nowrap; /* 強制所有內容在同一行 */
-            animation: marquee 80s linear infinite; /* 80秒循環一次，速度中等 */
+            white-space: nowrap; 
+            animation: marquee 80s linear infinite; 
         }
-        /* 定義跑馬燈動畫：從右側 (100%) 移動到左側 (-100%) */
         @keyframes marquee {
             0%   { transform: translateX(100%); } 
             100% { transform: translateX(-100%); } 
@@ -104,15 +71,11 @@
         
         .marquee-item {
             display: inline-block;
-            padding: 0 60px; /* 增加留言之間的間隔 */
+            padding: 0 60px; 
             font-weight: 900;
             transition: color 0.3s;
         }
-        .marquee-item:hover {
-            opacity: 0.8;
-        }
         /* --- 跑馬燈核心樣式結束 --- */
-
 
         /* Footer */
         .footer { position: absolute; bottom: 0; width: 100%; background: white; padding: 10px; text-align: center; font-size: 0.75rem; color: #888; }
@@ -167,7 +130,6 @@
 
         // --- 手機端 ---
         function submitMessage() {
-            // ... (submit logic remains the same)
             const input = document.getElementById('userInput');
             const btn = document.getElementById('submitBtn');
             const text = input.value.trim();
@@ -212,15 +174,13 @@
             const reversedData = [...data].reverse();
             
             // 3. 建立跑馬燈項目
-            reversedData.forEach((item, index) => {
+            reversedData.forEach((item) => {
                 const span = document.createElement('span');
                 span.className = 'marquee-item';
-                // 使用一個分隔符號讓訊息之間有明顯區隔
                 span.innerText = item.text + " ⭐ "; 
                 
                 // 亂數設定顏色和大小
                 const randomColor = randomTextColors[Math.floor(Math.random() * randomTextColors.length)];
-                // 範圍 1.5rem 到 3.0rem，讓大小有變化
                 const randomSize = (1.5 + Math.random() * 1.5) + 'rem'; 
                 
                 span.style.color = randomColor;
@@ -229,18 +189,14 @@
                 marqueeContent.appendChild(span);
             });
 
-            // 4. 【關鍵】複製內容，確保跑馬燈能無縫循環
-            // 複製兩次，確保內容足夠長可以覆蓋螢幕並實現無縫接軌
+            // 4. 複製內容，確保跑馬燈能無縫循環
             if (marqueeContent.innerHTML) {
                 marqueeContent.innerHTML += marqueeContent.innerHTML;
             }
         }
 
-        if (window.innerWidth > 768) {
-            updateWall(); 
-            // 3秒更新一次
-            setInterval(updateWall, 3000); 
-        }
-    </script>
-</body>
-</html>
+        // 確保 DOM 載入完成後才執行腳本
+        window.addEventListener('DOMContentLoaded', (event) => {
+            if (window.innerWidth > 768) {
+                updateWall(); 
+                setInterval(
