@@ -49,31 +49,53 @@
         /* --- 跑馬燈核心樣式 --- */
         .message-wall {
             width: 100%; 
-            height: 300px; 
+            height: 50vh; /* 佔據畫面上方更大的區域 */
             overflow: hidden; 
-            display: flex;
-            align-items: center; 
             position: absolute; 
-            top: 50%;
-            transform: translateY(-50%);
-            margin: 0;
-            padding: 0;
+            top: 25%; /* 放在上半部 */
+            transform: translateY(-25%);
+            display: flex;
+            flex-direction: column; /* 垂直排列跑馬燈軌道 */
+            justify-content: space-around; /* 讓 4 行平均分散 */
         }
+        
+        /* 單獨的跑馬燈軌道 */
+        .marquee-track {
+            width: 100%;
+            display: flex; /* 讓內部內容在同一行 */
+            align-items: center;
+            height: calc(50vh / 4); /* 讓每一行跑馬燈平均分配高度 */
+            box-sizing: content-box;
+        }
+
+        /* 跑馬燈內容 */
         .marquee-content {
             display: flex;
             white-space: nowrap; 
-            animation: marquee 80s linear infinite; 
-        }
-        @keyframes marquee {
-            0%   { transform: translateX(100%); } 
-            100% { transform: translateX(-100%); } 
+            animation-duration: 60s; /* 預設速度 */
+            animation-timing-function: linear;
+            animation-iteration-count: infinite;
         }
         
+        /* 不同的軌道給予不同的動畫時間，讓跑馬燈看起來更自然不整齊 */
+        #track-0 .marquee-content { animation-name: marquee-0; animation-duration: 75s; }
+        #track-1 .marquee-content { animation-name: marquee-1; animation-duration: 60s; }
+        #track-2 .marquee-content { animation-name: marquee-2; animation-duration: 90s; }
+        #track-3 .marquee-content { animation-name: marquee-3; animation-duration: 65s; }
+
+
+        @keyframes marquee-0 { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+        @keyframes marquee-1 { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+        @keyframes marquee-2 { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+        @keyframes marquee-3 { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+
+        /* 跑馬燈單一項目 */
         .marquee-item {
             display: inline-block;
             padding: 0 60px; 
             font-weight: 900;
             transition: color 0.3s;
+            line-height: 1.2;
         }
         /* --- 跑馬燈核心樣式結束 --- */
 
@@ -114,108 +136,12 @@
                 <div class="impact-text">每一個行動改變 > 成就巨大的影響力</div>
             </div>
             <div class="message-wall" id="wallContainer">
-                </div>
+                <div class="marquee-track" id="track-0"></div>
+                <div class="marquee-track" id="track-1"></div>
+                <div class="marquee-track" id="track-2"></div>
+                <div class="marquee-track" id="track-3"></div>
+            </div>
         </div>
     </div>
 
-    <div class="footer">主辦單位：隆中向上教育基金會 | 贊助單位：XSGames GameSparcs</div>
-
-    <script>
-        // ✅ Google Apps Script 網址
-        const scriptURL = "https://script.google.com/macros/s/AKfycbzvncIKXT9kH8bpgpk2bt6kusxP1Yk4vb3BrosCLpr00Xlf1wQ5qkRslQI4_g0K638NxA/exec"; 
-
-        const wallContainer = document.getElementById('wallContainer');
-        let currentMessagesHash = ""; 
-        const randomTextColors = ['#A62323', '#2E7D63', '#444444', '#6C757D', '#8D6A00', '#1E3A5F', '#5A2D54'];
-
-        // --- 手機端 ---
-        function submitMessage() {
-            const input = document.getElementById('userInput');
-            const btn = document.getElementById('submitBtn');
-            const text = input.value.trim();
-            if (!text) { alert("請輸入內容！"); return; }
-            btn.disabled = true;
-            btn.innerText = "傳送中...";
-            fetch(`${scriptURL}?action=insert&text=${encodeURIComponent(text)}`)
-                .then(() => {
-                    alert("感謝您的響應！訊息已上牆。");
-                    input.value = "";
-                    btn.disabled = false;
-                    btn.innerText = "送出行動";
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert("發送失敗，請檢查網路。");
-                    btn.disabled = false;
-                    btn.innerText = "重試";
-                });
-        }
-
-        // --- 牆面端 (跑馬燈) ---
-        function updateWall() {
-            fetch(`${scriptURL}?action=read`)
-                .then(response => response.json())
-                .then(data => {
-                    const newHash = JSON.stringify(data);
-                    if (newHash !== currentMessagesHash) {
-                        currentMessagesHash = newHash;
-                        renderMarquee(data);
-                    }
-                })
-                .catch(console.error);
-        }
-
-        function renderMarquee(data) {
-            wallContainer.innerHTML = ''; // 清空容器
-
-            // ⚠️ 診斷訊息：如果沒有資料，顯示提示
-            if (!data || data.length === 0 || data.every(item => !item.text)) {
-                wallContainer.innerHTML = `<div style="text-align:center; font-size:2rem; color:#A62323; padding-top:100px;">
-                                              <p>❌ 目前沒有留言資料。</p>
-                                              <p style="font-size:1.2rem; color:#444;">請確認：1. Google Apps Script 網址正確； 2. 試算表內有內容。</p>
-                                          </div>`;
-                return;
-            }
-
-            // 1. 建立跑馬燈容器
-            wallContainer.innerHTML = `<div class="marquee-content"></div>`;
-            const marqueeContent = wallContainer.querySelector('.marquee-content');
-            
-            // 2. 反轉資料 (最新的在前)
-            const reversedData = [...data].reverse();
-            
-            // 3. 建立跑馬燈項目
-            reversedData.forEach((item) => {
-                // 忽略文字為空的項目
-                if (!item.text) return; 
-                
-                const span = document.createElement('span');
-                span.className = 'marquee-item';
-                span.innerText = item.text + " ⭐ "; 
-                
-                // 亂數設定顏色和大小
-                const randomColor = randomTextColors[Math.floor(Math.random() * randomTextColors.length)];
-                const randomSize = (1.5 + Math.random() * 1.5) + 'rem'; 
-                
-                span.style.color = randomColor;
-                span.style.fontSize = randomSize;
-                
-                marqueeContent.appendChild(span);
-            });
-
-            // 4. 複製內容，確保跑馬燈能無縫循環
-            if (marqueeContent.innerHTML) {
-                marqueeContent.innerHTML += marqueeContent.innerHTML;
-            }
-        }
-
-        // 確保 DOM 載入完成後才執行腳本
-        window.addEventListener('DOMContentLoaded', (event) => {
-            if (window.innerWidth > 768) {
-                updateWall(); 
-                setInterval(updateWall, 3000); 
-            }
-        });
-    </script>
-</body>
-</html>
+    <div
