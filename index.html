@@ -166,7 +166,18 @@
         }
 
         function renderMarquee(data) {
-            // 1. 清空並建立跑馬燈容器
+            wallContainer.innerHTML = ''; // 清空容器
+
+            // ⚠️ 診斷訊息：如果沒有資料，顯示提示
+            if (!data || data.length === 0 || data.every(item => !item.text)) {
+                wallContainer.innerHTML = `<div style="text-align:center; font-size:2rem; color:#A62323; padding-top:100px;">
+                                              <p>❌ 目前沒有留言資料。</p>
+                                              <p style="font-size:1.2rem; color:#444;">請確認：1. Google Apps Script 網址正確； 2. 試算表內有內容。</p>
+                                          </div>`;
+                return;
+            }
+
+            // 1. 建立跑馬燈容器
             wallContainer.innerHTML = `<div class="marquee-content"></div>`;
             const marqueeContent = wallContainer.querySelector('.marquee-content');
             
@@ -175,6 +186,9 @@
             
             // 3. 建立跑馬燈項目
             reversedData.forEach((item) => {
+                // 忽略文字為空的項目
+                if (!item.text) return; 
+                
                 const span = document.createElement('span');
                 span.className = 'marquee-item';
                 span.innerText = item.text + " ⭐ "; 
@@ -199,4 +213,9 @@
         window.addEventListener('DOMContentLoaded', (event) => {
             if (window.innerWidth > 768) {
                 updateWall(); 
-                setInterval(
+                setInterval(updateWall, 3000); 
+            }
+        });
+    </script>
+</body>
+</html>
