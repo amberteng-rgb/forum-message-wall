@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>垃圾減量大作戰！</title>
     
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-cloud@1.2.5/d3.cloud.min.js"></script>
+    
     <style>
         /* --- 風格設定 (維持不變) --- */
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;500;700;900&display=swap');
@@ -77,43 +80,26 @@
             display: inline-block;
         }
         
-        /* --- 修改區塊：移除卡片樣式，只保留文字樣式 --- */
+        /* --- 修改區塊：文字雲容器樣式 --- */
         .message-wall {
-            height: 100%;
-            overflow-y: scroll; 
-            position: relative;
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* 調整最小寬度以容納更多文字 */
-            gap: 15px; /* 縮小間距 */
-            align-items: start;
-            padding: 20px 0;
-            mask-image: none; 
-            -webkit-mask-image: none;
+            width: 100%; 
+            height: 100%; /* 佔滿剩餘空間 */
+            display: flex; 
+            justify-content: center;
+            align-items: center;
+            overflow: hidden; /* 隱藏超出範圍的內容，移除滾動條 */
+            padding: 0;
         }
         
-        .message-card {
-            /* 移除背景、陰影、邊框等卡片樣式 */
-            background: transparent; /* 背景透明 */
-            padding: 5px 10px; /* 縮小內邊距 */
-            border-radius: 0; /* 移除圓角 */
-            box-shadow: none; /* 移除陰影 */
-            border-left: none; /* 移除左邊框 */
-            
-            font-size: 1.2rem; 
-            font-weight: 700; /* 文字加粗，更容易看到 */
-            animation: slideIn 0.8s ease-out;
-            width: 100%; 
-            max-width: none; 
-            margin: 0; 
-            transition: transform 0.5s; /* 僅保留變形平滑過渡 */
-            text-align: center; /* 文字居中 */
-            word-break: break-word; /* 防止長單詞溢出 */
-            line-height: 1.3;
+        /* D3 文字樣式 */
+        .word-cloud-text {
+            font-family: 'Noto Sans TC', sans-serif;
+            font-weight: 700;
+            cursor: default;
+            transition: opacity 0.3s;
         }
         /* --- 修改區塊結束 --- */
 
-        /* 移除 .message-card:nth-child(even) 因為不再有邊框 */
-        @keyframes slideIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
 
         /* Footer */
         .footer { position: absolute; bottom: 0; width: 100%; background: white; padding: 10px; text-align: center; font-size: 0.75rem; color: #888; }
@@ -168,13 +154,7 @@
 
         // --- 定義亂數顏色列表 ---
         const randomTextColors = [
-            '#A62323', // Primary Red
-            '#2E7D63', // Primary Green
-            '#444444', // 深灰色
-            '#6C757D', // 灰色
-            '#8D6A00', // 深金色 (Accent Gold 稍微暗一點)
-            '#1E3A5F', // 深藍色 (新增)
-            '#5A2D54'  // 紫色系 (新增)
+            '#A62323', '#2E7D63', '#444444', '#6C757D', '#8D6A00', '#1E3A5F', '#5A2D54'
         ];
 
         // --- 手機端邏輯 (保持不變) ---
@@ -200,7 +180,7 @@
                 });
         }
 
-        // --- 牆面端邏輯 ---
+        // --- 牆面端邏輯 (使用 D3-Cloud 實現最新居中) ---
 
         function updateWall() {
             fetch(`${scriptURL}?action=read`)
@@ -209,38 +189,65 @@
                     const newHash = JSON.stringify(data);
                     if (newHash !== currentMessagesHash) {
                         currentMessagesHash = newHash;
-                        renderWall(data);
+                        // 這裡呼叫新的 D3 繪圖函式
+                        renderD3WordCloud(data);
                     }
                 })
                 .catch(console.error);
         }
 
-        // 使用隨機旋轉和偏移的穩定繪製函式
-        function renderWall(data) {
-            wallContainer.innerHTML = ""; // 清空
-            data.forEach((item, index) => {
-                const card = document.createElement('div');
-                card.className = 'message-card';
-                card.style.animationDelay = `${index * 0.1}s`;
-                card.innerText = item.text;
+        function renderD3WordCloud(data) {
+            // 1. 資料處理：反轉陣列，讓最新的資料排在最前面 (index 0)
+            const reversedData = [...data].reverse();
 
-                // --- 實現亂數旋轉、偏移和顏色 ---
-                const randomRotation = Math.floor(Math.random() * 8) - 4; // -4 度到 +3 度之間
-                const randomXOffset = Math.floor(Math.random() * 20) - 10; // -10px 到 +9px 之間
-                const randomSize = Math.floor(Math.random() * 0.8) + 1.2; // 1.2rem 到 2.0rem 之間
-                const randomColor = randomTextColors[Math.floor(Math.random() * randomTextColors.length)];
-                
-                card.style.transform = `rotate(${randomRotation}deg) translateX(${randomXOffset}px)`;
-                card.style.fontSize = `${randomSize}rem`; // 設定亂數字體大小
-                card.style.color = randomColor; // 設定亂數顏色
+            // 2. 計算字體大小和顏色：
+            // 依據 index 決定大小，index 越小(越新)字體越大
+            // 最大字體 45px，最小 14px，每增加一個 index 減少 1.5px
+            const words = reversedData.map((d, i) => ({
+                text: d.text,
+                size: Math.max(14, 45 - i * 1.5), 
+                color: randomTextColors[Math.floor(Math.random() * randomTextColors.length)]
+            }));
 
-                // 讓滑鼠移上去時可以停止動畫 (提升可讀性)
-                card.onmouseover = () => card.style.transform = 'none'; 
-                card.onmouseout = () => card.style.transform = `rotate(${randomRotation}deg) translateX(${randomXOffset}px)`;
-                // --- 結束亂數排列 ---
+            // 清空舊的內容
+            wallContainer.innerHTML = '';
+            const width = wallContainer.clientWidth;
+            const height = wallContainer.clientHeight;
 
-                wallContainer.appendChild(card);
-            });
+            // 3. 設定 D3-Cloud 佈局
+            const layout = d3.cloud()
+                .size([width, height])
+                .words(words)
+                .padding(2) // 文字間距
+                // 隨機旋轉：大部分水平(0度)，少部分旋轉90度，模擬範例圖片效果
+                .rotate(() => (Math.random() > 0.7 ? 90 : 0)) 
+                .font("Noto Sans TC")
+                .fontSize(d => d.size)
+                .on("end", draw); // 佈局完成後呼叫 draw 函式
+
+            layout.start();
+
+            // 4. 繪製 SVG
+            function draw(words) {
+                d3.select("#wallContainer").append("svg")
+                    .attr("width", layout.size()[0])
+                    .attr("height", layout.size()[1])
+                    .append("g")
+                    .attr("transform", "translate(" + layout.size()[0] / 2 + "," + layout.size()[1] / 2 + ")")
+                    .selectAll("text")
+                    .data(words)
+                    .enter().append("text")
+                    .attr("class", "word-cloud-text")
+                    .style("font-size", d => d.size + "px")
+                    .style("fill", d => d.color)
+                    .attr("text-anchor", "middle")
+                    .attr("transform", d => "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")")
+                    .text(d => d.text)
+                    .style("opacity", 0)
+                    .transition() // 加入淡入動畫
+                    .duration(800)
+                    .style("opacity", 1);
+            }
         }
 
         // 只有在寬螢幕 (牆面) 時才啟用自動更新
